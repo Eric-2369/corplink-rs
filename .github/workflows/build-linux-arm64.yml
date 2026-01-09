@@ -1,0 +1,53 @@
+name: build-linux-arm64
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  build:
+    name: Build (linux arm64)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ">=1.22.0"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang libclang-dev pkg-config libssl-dev
+
+      - name: Build libwg
+        run: |
+          cd libwg
+          ./build.sh
+
+      - name: Build (release)
+        run: cargo build --release
+
+      - name: Package artifact
+        run: |
+          mkdir -p dist
+          cp target/release/corplink-rs dist/
+          cp config/config.json dist/
+          tar -czf corplink-rs-linux-arm64.tar.gz -C dist corplink-rs config.json
+          file dist/corplink-rs || true
+          uname -m
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: corplink-rs-linux-arm64
+          path: corplink-rs-linux-arm64.tar.gz
+          if-no-files-found: error
