@@ -80,6 +80,7 @@ mod imp {
             match Command::new("resolvectl").arg("revert").arg(interface).output() {
                 Ok(output) if output.status.success() => {
                     let _ = Command::new("resolvectl").arg("flush-caches").status();
+                    log::info!("restored systemd-resolved on {interface}");
                     Ok(())
                 }
                 Ok(output) => {
@@ -92,6 +93,9 @@ mod imp {
                         || stderr.contains("No such device")
                         || stdout.contains("No such device")
                     {
+                        log::info!(
+                            "skip restoring systemd-resolved on {interface}: interface not found"
+                        );
                         return Ok(());
                     }
 
