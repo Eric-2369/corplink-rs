@@ -77,16 +77,40 @@ mod imp {
 
         pub fn restore_dns(&self, interface: &str) -> Result<()> {
             // If resolvectl is missing or systemd-resolved isn't present, restoring is a no-op.
-            match Command::new("resolvectl")
-                .arg("revert")
-                .arg(interface)
-                .status()
-            {
-                Ok(status) if status.success() => Ok(()),
-                Ok(status) => Err(anyhow!(
-                    "resolvectl revert returned non-zero exit code: {}",
-                    status
-                )),
+            match Command::new("resolvectl").arg("revert").arg(interface).output() {
+                Ok(output) if output.status.success() => {
+                    let _ = Command::new("resolvectl").arg("flush-caches").status();
+                    Ok(())
+                }
+                Ok(output) => {
+                    // If the interface was already deleted (e.g. wg-go stopped first), there is
+                    // nothing left to restore. Treat it as best-effort success.
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    if stderr.contains("Failed to resolve interface")
+                        || stdout.contains("Failed to resolve interface")
+                        || stderr.contains("No such device")
+                        || stdout.contains("No such device")
+                    {
+                        return Ok(());
+                    }
+
+                    let msg = stderr
+                        .trim()
+                        .lines()
+                        .next()
+                        .or_else(|| stdout.trim().lines().next())
+                        .unwrap_or_default();
+                    Err(anyhow!(
+                        "resolvectl revert returned non-zero exit code: {}{}",
+                        output.status,
+                        if msg.is_empty() {
+                            String::new()
+                        } else {
+                            format!(" ({msg})")
+                        }
+                    ))
+                }
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
                 Err(e) => Err(anyhow::Error::new(e).context("failed to run resolvectl revert")),
             }

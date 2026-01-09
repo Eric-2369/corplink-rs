@@ -198,8 +198,6 @@ async fn run() -> Result<()> {
         log::warn!("failed to disconnect vpn: {}", e)
     };
 
-    wg::stop_wg_go();
-
     if use_vpn_dns {
         match dns_manager.restore_dns(&name) {
             Ok(_) => {}
@@ -208,6 +206,8 @@ async fn run() -> Result<()> {
             }
         }
     }
+
+    wg::stop_wg_go();
 
     log::info!("reach exit");
     exit(exit_code)

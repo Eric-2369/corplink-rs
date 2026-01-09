@@ -606,8 +606,10 @@ impl Client {
             };
 
             log::info!(
-                "server name {}{}",
-                vpn.en_name,
+                "server {} (ip={}, protocol_mode={}){}",
+                vpn.name,
+                vpn.ip,
+                vpn.protocol_mode,
                 match latency {
                     -1 => " timeout".to_string(),
                     _ => format!(", latency {}ms", latency),
@@ -739,15 +741,15 @@ impl Client {
             vpn_info.len(),
             vpn_info
                 .iter()
-                .map(|i| i.en_name.clone())
+                .map(|i| i.name.clone())
                 .collect::<Vec<String>>()
         );
         let filtered_vpn = vpn_info
             .into_iter()
             .filter(|vpn| {
                 if let Some(server_name) = self.conf.vpn_server_name.clone() {
-                    if vpn.en_name != server_name {
-                        log::info!("skip {}, expect {}", vpn.en_name, server_name);
+                    if vpn.name != server_name {
+                        log::info!("skip {}, expect {}", vpn.name, server_name);
                         return false;
                     }
                 }
@@ -765,7 +767,7 @@ impl Client {
                     _ => {
                         log::info!(
                             "server name {} is not support {} wg for now",
-                            vpn.en_name,
+                            vpn.name,
                             mode
                         );
                         false
@@ -788,7 +790,7 @@ impl Client {
             None => bail!("no vpn available"),
         };
         let vpn_addr = format!("{}:{}", vpn.ip, vpn.vpn_port);
-        log::info!("try connect to {}, address {}", vpn.en_name, vpn_addr);
+        log::info!("try connect to {}, address {}", vpn.name, vpn_addr);
 
         let key = self
             .conf

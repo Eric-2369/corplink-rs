@@ -61,7 +61,7 @@ pub struct RespVpnInfo {
     pub ip: String,
     // 1 for tcp, 2 for udp, we only support udp for now
     pub protocol_mode: i32,
-    // useless
+    // server name; prefer this over en_name (which may be empty on some deployments)
     pub name: String,
     pub en_name: String,
     pub icon: String,
