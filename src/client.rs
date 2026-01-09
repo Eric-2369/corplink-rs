@@ -606,10 +606,11 @@ impl Client {
             };
 
             log::info!(
-                "server {} (ip={}, protocol_mode={}){}",
+                "server {} (ip={}, protocol_mode={}, dedicated={}){}",
                 vpn.name,
                 vpn.ip,
                 vpn.protocol_mode,
+                vpn.dedicated,
                 match latency {
                     -1 => " timeout".to_string(),
                     _ => format!(", latency {}ms", latency),
@@ -744,14 +745,26 @@ impl Client {
                 .map(|i| i.name.clone())
                 .collect::<Vec<String>>()
         );
+        let expected_server_name = self.conf.vpn_server_name.clone();
+        let enable_dedicated_server = self.conf.enable_dedicated_server.unwrap_or(false);
         let filtered_vpn = vpn_info
             .into_iter()
             .filter(|vpn| {
-                if let Some(server_name) = self.conf.vpn_server_name.clone() {
-                    if vpn.name != server_name {
+                if let Some(server_name) = &expected_server_name {
+                    if &vpn.name != server_name {
                         log::info!("skip {}, expect {}", vpn.name, server_name);
                         return false;
                     }
+                    return true;
+                }
+                if !enable_dedicated_server && vpn.dedicated {
+                    log::info!(
+                        "skip dedicated server {} (ip={}, protocol_mode={})",
+                        vpn.name,
+                        vpn.ip,
+                        vpn.protocol_mode
+                    );
+                    return false;
                 }
                 true
             })

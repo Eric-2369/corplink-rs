@@ -134,6 +134,10 @@ RUST_LOG=debug ./corplink-rs config.json
   // latency: choose the server with the lowest latency
   // default: choose the first available server
   "vpn_select_strategy": "latency",
+  // whether to allow dedicated server in auto selection
+  // if false and vpn_server_name is not set, dedicated servers will be skipped
+  // default: false
+  "enable_dedicated_server": false,
   // use vpn dns
   // macos: set global DNS to VPN DNS (no split)
   // linux(systemd-resolved): set per-link split DNS via resolvectl
