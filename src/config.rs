@@ -137,6 +137,8 @@ pub struct WgConf {
 
     // extra confs
     pub dns: String,
+    pub dns_backup: String,
+    pub dns_domain_split: Vec<String>,
 
     // corplink confs
     pub protocol: i32,

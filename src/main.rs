@@ -13,7 +13,6 @@ mod wg;
 #[cfg(windows)]
 use is_elevated;
 
-#[cfg(target_os = "macos")]
 use dns::DNSManager;
 
 use std::env;
@@ -84,7 +83,6 @@ async fn run() -> Result<()> {
         .clone()
         .context("interface name missing in config")?;
 
-    #[cfg(target_os = "macos")]
     let use_vpn_dns = conf.use_vpn_dns.unwrap_or(false);
 
     if conf.server.is_none() {
@@ -147,12 +145,19 @@ async fn run() -> Result<()> {
         .await
         .with_context(|| format!("failed to config interface with uapi for {name}"))?;
 
-    #[cfg(target_os = "macos")]
     let mut dns_manager = DNSManager::new();
 
-    #[cfg(target_os = "macos")]
     if use_vpn_dns {
-        match dns_manager.set_dns(vec![&wg_conf.dns], vec![]) {
+        let mut dns_servers = vec![wg_conf.dns.clone()];
+        if !wg_conf.dns_backup.trim().is_empty() {
+            dns_servers.push(wg_conf.dns_backup.clone());
+        }
+        let domains = if cfg!(target_os = "linux") {
+            wg_conf.dns_domain_split.clone()
+        } else {
+            Vec::new()
+        };
+        match dns_manager.set_dns(&name, dns_servers, domains) {
             Ok(_) => {}
             Err(err) => {
                 log::warn!("failed to set dns: {}", err);
@@ -195,9 +200,8 @@ async fn run() -> Result<()> {
 
     wg::stop_wg_go();
 
-    #[cfg(target_os = "macos")]
     if use_vpn_dns {
-        match dns_manager.restore_dns() {
+        match dns_manager.restore_dns(&name) {
             Ok(_) => {}
             Err(err) => {
                 log::warn!("failed to delete dns: {}", err);

@@ -64,6 +64,17 @@ windows 中启动 `wg-go` 需要 [wintun](6) 支持，请到官网下载，并�
 macos 要求 tun 设备的名称满足正则表达式 `utun[0-9]*` ，因此需要将配置文件中的 `interface_name` 改为符合正则的名字，例如 `utun12345`  
 另外， `utun` 后的数字类型应该是 `int16` ，如果大于 `32767` 会报错 `Failed to create TUN device: invalid argument` 。具体参考 [#46](https://github.com/PinkD/corplink-rs/issues/46)
 
+## linux DNS 分流(可选)
+
+如果你的系统使用 `systemd-resolved`（可通过 `resolvectl status` 查看），并且希望「仅内网域名走 VPN DNS，其它域名保持原有 DNS」，可以在配置中开启 `use_vpn_dns`。
+
+该程序会在连接成功后自动调用 `resolvectl`：
+- 为 VPN 网卡设置 DNS Server（来自服务端返回的 `vpn_dns`/`vpn_dns_backup`）
+- 为 VPN 网卡设置 routed domains（来自服务端返回的 `vpn_dns_domain_split`，会自动去重/去掉通配符）
+- 关闭该网卡的 `default-route`，避免影响非分流域名
+
+> 注意：如果进程没有正常退出，DNS 配置可能不会自动恢复；可以手动执行 `sudo resolvectl revert <interface_name>`。
+
 ## log level 配置
 
 本项目使用 [env_logger](https://docs.rs/env_logger/latest/env_logger/) 作为 log 库，修改 log level 需要使用环境变量，示例：
@@ -123,7 +134,9 @@ RUST_LOG=debug ./corplink-rs config.json
   // latency: choose the server with the lowest latency
   // default: choose the first available server
   "vpn_select_strategy": "latency",
-  // use vpn dns for macos
+  // use vpn dns
+  // macos: set global DNS to VPN DNS (no split)
+  // linux(systemd-resolved): set per-link split DNS via resolvectl
   // NOTE: if process doesn't exit gracefully, your dns may not be restored
   "use_vpn_dns": false
 }

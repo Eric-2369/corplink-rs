@@ -800,6 +800,8 @@ impl Client {
         let wg_info = self.fetch_peer_info(&key).await?;
         let mtu = wg_info.setting.vpn_mtu;
         let dns = wg_info.setting.vpn_dns;
+        let dns_backup = wg_info.setting.vpn_dns_backup;
+        let dns_domain_split = wg_info.setting.vpn_dns_domain_split.unwrap_or_default();
         let peer_key = wg_info.public_key;
         let public_key = self
             .conf
@@ -835,6 +837,8 @@ impl Client {
             peer_key,
             route,
             dns,
+            dns_backup,
+            dns_domain_split,
             protocol: match vpn.protocol_mode {
                 // tcp
                 1 => 1,
